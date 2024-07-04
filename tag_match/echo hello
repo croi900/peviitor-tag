@@ -1,0 +1,49 @@
+use aho_corasick::{AhoCorasick, PatternID};
+use std::collections::HashSet;
+use std::env;
+use std::io::Read;
+fn match_tag(tag: &str, text: &str) -> f32 {
+    let confidence: f32;
+    let binding = std::fs::read_to_string(format!("tags/{}.tag", tag)).unwrap();
+    let patterns = binding
+        .split("\n")
+        .filter(|t| !t.is_empty())
+        .collect::<Vec<&str>>()
+        .to_vec();
+    let num_patterns = patterns.len() as f32;
+    //println!("{}", text);
+    let ac = AhoCorasick::builder()
+        .ascii_case_insensitive(true)
+        .build(patterns.clone())
+        .unwrap();
+
+    let mut matches = vec![];
+    for mat in ac.find_iter(text) {
+        println!("{}", mat.pattern().as_u32());
+        matches.push((mat.pattern(), mat.start(), mat.end()));
+    }
+
+    /*  println!(
+        "{} {} {} {} {:#?}",
+        format!("tags/{}.tag", tag),
+        matches.len(),
+        num_patterns,
+        text.len(),
+        patterns.clone()
+    );*/
+    confidence = matches.len() as f32;
+
+    confidence
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if let Some(text) = args.get(1) {
+        print!("{}", match_tag("intenrship", text));
+    } else {
+        let mut buffer = String::new();
+        std::io::stdin().read_to_string(&mut buffer).expect("error");
+        print!("{}", match_tag("internship", &buffer));
+    }
+}

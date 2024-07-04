@@ -1,0 +1,42 @@
+use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+use crate::{Job, fetching::get_jobs};
+use futures::{stream, StreamExt};
+use sha256::{digest, try_async_digest};
+
+pub async fn cache_jobs(jobs: Vec<Job>) -> std::io::Result<()>{
+    fs::create_dir("job_sources").ok();
+    let tasks = stream::iter(jobs)
+        .map(|job| {
+            async move{
+                let blob = job.blob.unwrap();
+                //let hash = digest(&blob);
+                
+                fs::write(format!("job_sources/{}.txt",&blob),&blob).unwrap();
+
+                //TESTING
+                println!("{}", &job.job_title.unwrap()[0]);
+                // tokio::fs::write(format!("job_sources/{}.txt",&job.blob),&job.blob).await
+                    
+
+            }
+        }).buffer_unordered(2000);
+
+    let _ = tasks
+    .for_each(|b| async {
+        ()
+    })
+    .await;
+    Ok(())
+}
+
+pub async fn update_jobs_html(beg: u64, size: u64, key: &String) -> Result<(),&str>{
+    if key == "testkey" {
+        let jobs = get_jobs(beg,size).await;
+        cache_jobs(jobs).await.unwrap();
+        Ok(())
+    }else{
+        Err("bad key")
+    }
+}
